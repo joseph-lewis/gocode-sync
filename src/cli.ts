@@ -20,6 +20,7 @@ import { fetchSyncSettings } from "./sync.js";
 import { serveStdio } from "./mcp.js";
 import type { SyncSource } from "./transcript.js";
 import type { CursorHookPayload } from "./capture/cursor.js";
+import type { OpenCodeHookPayload } from "./capture/opencode.js";
 
 /** Read all of stdin (used to pass the IDE hook payload to on-sync). */
 async function readStdin(): Promise<string> {
@@ -86,12 +87,13 @@ async function cmdStatus(): Promise<number> {
 async function cmdOnSync(flags: Record<string, string | boolean>): Promise<number> {
   const source = asString(flags.source) as SyncSource | undefined;
   if (!source) {
-    console.error("on-sync requires --source cursor|claude_code");
+    console.error("on-sync requires --source cursor|claude_code|opencode");
     return 0; // never block the turn
   }
   const server = await resolveServerUrl(asString(flags.server));
 
   let cursor: CursorHookPayload | undefined;
+  let opencode: OpenCodeHookPayload | undefined;
   let claudeSession: string | undefined;
   let transcriptPath: string | undefined;
 
@@ -101,6 +103,7 @@ async function cmdOnSync(flags: Record<string, string | boolean>): Promise<numbe
       try {
         const payload = JSON.parse(raw) as Record<string, unknown>;
         if (source === "cursor") cursor = payload as CursorHookPayload;
+        if (source === "opencode") opencode = payload as OpenCodeHookPayload;
         if (source === "claude_code") {
           if (typeof payload.session_id === "string") claudeSession = payload.session_id;
           if (typeof payload.transcript_path === "string") transcriptPath = payload.transcript_path;
@@ -118,6 +121,7 @@ async function cmdOnSync(flags: Record<string, string | boolean>): Promise<numbe
     server,
     dryRun: flags["dry-run"] === true,
     cursor,
+    opencode,
     claude: source === "claude_code" && claudeSession ? { sessionId: claudeSession, transcriptPath } : undefined,
   });
   // Quiet by default; print only on dry-run / verbose for debuggability.

@@ -9,8 +9,8 @@
 [`@trygocode/notify`](https://www.npmjs.com/package/@trygocode/notify). Notify
 pings your phone when a coding run finishes. This package adds one extra,
 clearly-scoped capability: at the end of each turn it can sync the **current**
-Cursor / Claude Code conversation up to your GoCode server so you can pick up
-context on the go.
+Cursor / Claude Code / OpenCode conversation up to your GoCode server so you can
+pick up context on the go.
 
 It is a **separate package on purpose.** Code that reads chat transcripts and
 uploads them is exactly the shape security folks (rightly) scrutinise. By
@@ -94,9 +94,17 @@ different chat and it uploads nothing while the app toggle is off.
 
 | IDE | Status |
 |---|---|
-| Claude Code | supported (per-session JSONL) |
+| Claude Code | supported (current session's JSONL) |
 | Cursor | supported (current conversation from the hook payload) |
-| OpenCode | not yet — coming once its hook/store shape is stable |
+| OpenCode | supported (`session.idle` plugin → current session's messages via OpenCode's SDK) |
+
+> **OpenCode** is wired via a tiny `session.idle` plugin written to
+> `~/.config/opencode/plugin/gocode-sync.js`. When a session goes idle the
+> plugin fetches **only that one session's** messages through OpenCode's own
+> SDK (`client.session.messages`) and pipes them to `gocode-sync on-sync` — it
+> never lists or reads other sessions, never touches the on-disk store, and
+> obeys the same server-side opt-in gate. `npx @trygocode/sync uninstall`
+> removes the plugin and its MCP entry surgically.
 
 ## How "no duplicates" works
 

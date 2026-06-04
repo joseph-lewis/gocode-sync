@@ -1,7 +1,7 @@
 {
   "name": "@trygocode/sync",
-  "version": "0.1.1",
-  "description": "Optional companion to @trygocode/notify: sync ONLY your current IDE chat (Cursor, Claude Code) to your own self-hosted GoCode server so you can read it on your phone. Off by default, opt-in, single-session only. Never reads your other chats.",
+  "version": "0.2.0",
+  "description": "Optional companion to @trygocode/notify: sync ONLY your current IDE chat (Cursor, Claude Code, OpenCode) to your own self-hosted GoCode server so you can read it on your phone. Off by default, opt-in, single-session only. Never reads your other chats.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -27,6 +27,7 @@
     "transcript",
     "cursor",
     "claude-code",
+    "opencode",
     "ide",
     "companion",
     "read-only"

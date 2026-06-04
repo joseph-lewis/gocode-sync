@@ -91,7 +91,8 @@ export async function handleSync(
   deps: McpDeps = {},
 ): Promise<CallToolResult> {
   const a = args ?? {};
-  const source = (a.source === "cursor" ? "cursor" : "claude_code") as SyncSource;
+  const source: SyncSource =
+    a.source === "cursor" ? "cursor" : a.source === "opencode" ? "opencode" : "claude_code";
 
   if (source === "cursor") {
     return errorResult(
@@ -99,6 +100,15 @@ export async function handleSync(
         "installed stop hook (the MCP tool has no access to Cursor's current " +
         "conversation). Ensure `gocode-sync setup` has run and 'Sync my IDE " +
         "chat' is enabled in the GoCode app.",
+    );
+  }
+
+  if (source === "opencode") {
+    return errorResult(
+      "gocode_sync_current_chat: OpenCode chats sync automatically via the " +
+        "installed session.idle plugin (the MCP tool has no access to OpenCode's " +
+        "current conversation). Ensure `gocode-sync setup` has run and 'Sync my " +
+        "IDE chat' is enabled in the GoCode app.",
     );
   }
 

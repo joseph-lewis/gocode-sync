@@ -20,6 +20,7 @@
 import { readCredentials, type PathOpts } from "./creds.js";
 import { captureClaude, type ClaudeCaptureInput } from "./capture/claude.js";
 import { captureCursor, type CursorHookPayload } from "./capture/cursor.js";
+import { captureOpenCode, type OpenCodeHookPayload } from "./capture/opencode.js";
 import { sanitiseTranscript } from "./redact.js";
 import { uploadTranscript, appendLog, type SyncStatus, type UploadResult } from "./upload.js";
 import type { CapturedTranscript, SyncSource } from "./transcript.js";
@@ -62,6 +63,8 @@ export interface OnSyncOptions extends PathOpts {
   claude?: Pick<ClaudeCaptureInput, "sessionId" | "transcriptPath" | "project">;
   /** Cursor: the parsed stop-hook stdin payload. */
   cursor?: CursorHookPayload;
+  /** OpenCode: the parsed `session.idle` plugin stdin payload. */
+  opencode?: OpenCodeHookPayload;
 
   // ── injectable dependencies (defaulted to real implementations) ──
   /** Fetch the per-user sync gate. Defaults to {@link fetchSyncSettings}. */
@@ -127,7 +130,11 @@ async function defaultCapture(opts: OnSyncOptions): Promise<CapturedTranscript |
     if (!opts.cursor) return null;
     return captureCursor(opts.cursor, cwd);
   }
-  // opencode + anything else → not supported yet
+  if (opts.source === "opencode") {
+    if (!opts.opencode) return null;
+    return captureOpenCode(opts.opencode, cwd);
+  }
+  // anything else → not supported
   return null;
 }
 

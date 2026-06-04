@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { captureClaude, encodeProjectDir, claudeSessionFile } from "../src/capture/claude.js";
 import { captureCursor } from "../src/capture/cursor.js";
-import { captureOpenCode, OPENCODE_UNSUPPORTED_REASON } from "../src/capture/opencode.js";
+import { captureOpenCode } from "../src/capture/opencode.js";
 
 async function tmpHome(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), "gcsync-"));
@@ -75,7 +75,77 @@ test("captureCursor reads from the hook payload, needs a stable id + messages", 
   assert.equal(captureCursor({ conversation_id: "c" }), null);
 });
 
-test("captureOpenCode is a clear stub", () => {
-  assert.equal(captureOpenCode(), null);
-  assert.match(OPENCODE_UNSUPPORTED_REASON, /not yet supported/i);
+test("captureOpenCode parses the SDK { info, parts } shape (current session only)", () => {
+  const res = captureOpenCode({
+    session_id: "ses_abc",
+    workspace_path: "/work/repo",
+    title: "My OpenCode chat",
+    messages: [
+      {
+        info: { id: "m1", role: "user", time: { created: 1735689600000 } },
+        parts: [{ type: "text", text: "build the feature" }],
+      },
+      {
+        info: { id: "m2", role: "assistant" },
+        parts: [
+          { type: "reasoning", text: "thinking…" },
+          { type: "tool", tool: "edit" },
+          { type: "text", text: "done — shipped it" },
+        ],
+      },
+    ],
+  });
+  assert.ok(res);
+  assert.equal(res!.source, "opencode");
+  assert.equal(res!.ide_session_id, "ses_abc");
+  assert.equal(res!.workspace_path, "/work/repo");
+  assert.equal(res!.title, "My OpenCode chat");
+  assert.equal(res!.messages.length, 2);
+  assert.equal(res!.messages[0].role, "user");
+  assert.equal(res!.messages[0].content, "build the feature");
+  // epoch-ms `time.created` → ISO timestamp
+  assert.equal(res!.messages[0].ts, "2025-01-01T00:00:00.000Z");
+  // assistant: reasoning + tool summary + text are all concatenated
+  assert.match(res!.messages[1].content, /thinking/);
+  assert.match(res!.messages[1].content, /\[tool: edit\]/);
+  assert.match(res!.messages[1].content, /done — shipped it/);
+});
+
+test("captureOpenCode accepts sessionID alias + a {data:[...]} wrapper", () => {
+  const res = captureOpenCode({
+    sessionID: "ses_xyz",
+    directory: "/repo",
+    messages: { data: [{ info: { role: "user" }, parts: [{ type: "text", text: "hi" }] }] },
+  } as never);
+  assert.ok(res);
+  assert.equal(res!.ide_session_id, "ses_xyz");
+  assert.equal(res!.workspace_path, "/repo");
+  assert.equal(res!.messages.length, 1);
+  assert.equal(res!.messages[0].content, "hi");
+});
+
+test("captureOpenCode tolerates a lenient string-content fallback", () => {
+  const res = captureOpenCode({
+    session_id: "ses_str",
+    workspace_path: "/r",
+    messages: [{ role: "assistant", content: "plain string content" }],
+  });
+  assert.ok(res);
+  assert.equal(res!.messages.length, 1);
+  assert.equal(res!.messages[0].content, "plain string content");
+});
+
+test("captureOpenCode is fail-safe: no id or no messages → null", () => {
+  // No session id → cannot key a stable chat.
+  assert.equal(
+    captureOpenCode({ messages: [{ info: { role: "user" }, parts: [{ type: "text", text: "x" }] }] }),
+    null,
+  );
+  // Stable id but no usable messages.
+  assert.equal(captureOpenCode({ session_id: "ses_empty", messages: [] }), null);
+  // Parts of an unrecognised type carry no text → message dropped → null.
+  assert.equal(
+    captureOpenCode({ session_id: "ses_misc", messages: [{ info: { role: "assistant" }, parts: [{ type: "file", url: "x" }] }] }),
+    null,
+  );
 });
