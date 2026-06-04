@@ -110,14 +110,47 @@ export interface ServerSources {
 
 /** Resolve the effective server URL: flag > env > creds.server > default. */
 export function resolveServer(sources: ServerSources): string {
-  const chosen = firstNonEmpty(
+  return resolveServerWithSource(sources).server;
+}
+
+/**
+ * Like {@link resolveServer} but also reports WHICH layer won, so callers can
+ * warn when they fell through to the built-in default. `usedBuiltInDefault` is
+ * true only when no flag, env, or paired `creds.server` supplied a value — i.e.
+ * the one case where an unconfigured self-hoster could accidentally upload to
+ * the project's hosted default instead of their own box (config-safety).
+ */
+export function resolveServerWithSource(sources: ServerSources): {
+  server: string;
+  source: "flag" | "env" | "creds" | "default";
+  usedBuiltInDefault: boolean;
+} {
+  const fromConfigured = firstNonEmpty(
     sources.flag,
     sources.env,
     sources.creds?.server,
-    sources.default ?? DEFAULT_SERVER,
   );
-  return normalizeServer(chosen ?? DEFAULT_SERVER);
+  if (fromConfigured !== undefined) {
+    const source = firstNonEmpty(sources.flag)
+      ? "flag"
+      : firstNonEmpty(sources.env)
+        ? "env"
+        : "creds";
+    return {
+      server: normalizeServer(fromConfigured),
+      source,
+      usedBuiltInDefault: false,
+    };
+  }
+  const fallback = sources.default ?? DEFAULT_SERVER;
+  return {
+    server: normalizeServer(fallback),
+    source: "default",
+    usedBuiltInDefault: true,
+  };
 }
+
+let _warnedDefaultServer = false;
 
 /** Convenience: resolve server URL from --server flag, GOCODE_SERVER env, creds. */
 export async function resolveServerUrl(flag?: string, opts?: PathOpts): Promise<string> {
@@ -127,5 +160,22 @@ export async function resolveServerUrl(flag?: string, opts?: PathOpts): Promise<
   } catch {
     creds = null;
   }
-  return resolveServer({ flag, env: process.env.GOCODE_SERVER ?? null, creds });
+  const resolved = resolveServerWithSource({
+    flag,
+    env: process.env.GOCODE_SERVER ?? null,
+    creds,
+  });
+  // One-time, non-fatal heads-up: a self-hoster who never paired and never set
+  // --server / GOCODE_SERVER would otherwise silently target the project's
+  // hosted default. Warn (stderr) so it's visible without breaking the flow.
+  if (resolved.usedBuiltInDefault && !_warnedDefaultServer) {
+    _warnedDefaultServer = true;
+    process.stderr.write(
+      `[gocode-sync] No server configured (no pairing, --server, or GOCODE_SERVER); ` +
+        `falling back to the built-in default ${resolved.server}. ` +
+        `Point this at YOUR OWN GoCode server with \`gocode-notify login\` or ` +
+        `--server / GOCODE_SERVER if that is not what you want.\n`,
+    );
+  }
+  return resolved.server;
 }

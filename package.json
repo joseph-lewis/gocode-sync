@@ -1,6 +1,6 @@
 {
   "name": "@trygocode/sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Optional companion to @trygocode/notify: sync ONLY your current IDE chat (Cursor, Claude Code) to your own self-hosted GoCode server so you can read it on your phone. Off by default, opt-in, single-session only. Never reads your other chats.",
   "license": "MIT",
   "type": "module",
@@ -34,6 +34,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/joseph-lewis/gocode-sync.git"
+  },
+  "homepage": "https://github.com/joseph-lewis/gocode-sync#readme",
+  "bugs": {
+    "url": "https://github.com/joseph-lewis/gocode-sync/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
