@@ -88,7 +88,7 @@ test("captureOpenCode parses the SDK { info, parts } shape (current session only
       {
         info: { id: "m2", role: "assistant" },
         parts: [
-          { type: "reasoning", text: "thinking…" },
+          { type: "reasoning", text: "secret thinking" },
           { type: "tool", tool: "edit" },
           { type: "text", text: "done — shipped it" },
         ],
@@ -105,10 +105,10 @@ test("captureOpenCode parses the SDK { info, parts } shape (current session only
   assert.equal(res!.messages[0].content, "build the feature");
   // epoch-ms `time.created` → ISO timestamp
   assert.equal(res!.messages[0].ts, "2025-01-01T00:00:00.000Z");
-  // assistant: reasoning + tool summary + text are all concatenated
-  assert.match(res!.messages[1].content, /thinking/);
+  // assistant: visible text + tool summary are synced; reasoning is NOT (privacy)
   assert.match(res!.messages[1].content, /\[tool: edit\]/);
   assert.match(res!.messages[1].content, /done — shipped it/);
+  assert.doesNotMatch(res!.messages[1].content, /secret thinking/);
 });
 
 test("captureOpenCode accepts sessionID alias + a {data:[...]} wrapper", () => {

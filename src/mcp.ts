@@ -53,7 +53,7 @@ export const TOOLS: readonly Tool[] = [
       properties: {
         source: {
           type: "string",
-          enum: ["cursor", "claude_code"],
+          enum: ["cursor", "claude_code", "opencode"],
           description: "Which IDE this chat is in. Defaults to claude_code.",
         },
       },

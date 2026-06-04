@@ -63,16 +63,17 @@ function textFromParts(parts: unknown): string {
   for (const p of parts) {
     if (!p || typeof p !== "object") continue;
     const part = p as Record<string, unknown>;
-    // Text parts carry the conversational markdown.
+    // Text parts carry the conversational markdown — this is what the user
+    // sees in the chat and is the only content we sync as message text.
     if (part.type === "text" && typeof part.text === "string") {
       out.push(part.text);
-    } else if (part.type === "reasoning" && typeof part.text === "string") {
-      // Reasoning is shown collapsed in the IDE; keep it but marked.
-      out.push(part.text);
     } else if (part.type === "tool" && typeof part.tool === "string") {
-      // Summarise tool calls; never reconstruct their internals.
+      // Summarise tool calls (name only); never reconstruct their internals.
       out.push(`\u200b[tool: ${part.tool}]`);
     }
+    // NOTE: `reasoning` parts are deliberately NOT synced. They're the model's
+    // hidden/collapsed thinking, which users don't expect uploaded under the
+    // "sync my current chat" promise — keep the surface to visible chat only.
   }
   return out.join("\n").trim();
 }
