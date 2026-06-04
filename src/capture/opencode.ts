@@ -56,7 +56,11 @@ function firstString(...vals: Array<unknown>): string | undefined {
   return undefined;
 }
 
-/** Extract verbatim text from an OpenCode `parts` array (text parts only). */
+/**
+ * Build the synced text from an OpenCode `parts` array: verbatim `text` parts
+ * plus a one-line summary (name only) for `tool` parts. `reasoning` and all
+ * other part types are intentionally excluded (see the NOTE below).
+ */
 function textFromParts(parts: unknown): string {
   if (!Array.isArray(parts)) return "";
   const out: string[] = [];
